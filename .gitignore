@@ -1,0 +1,9 @@
+# Obsidian 缓存与工作区状态
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/backups/
+.obsidian/plugins/obsidian-git/data.json
+
+# 系统垃圾
+.DS_Store
+Thumbs.db
