@@ -1,6 +1,6 @@
 {
-  "userName": "",
-  "permissionMode": "yolo",
+  "userName": "主人",
+  "permissionMode": "normal",
   "model": "haiku",
   "thinkingBudget": "off",
   "effortLevel": "high",
@@ -38,19 +38,160 @@
       "environmentHash": ""
     },
     "codex": {
-      "enabled": false,
+      "enabled": true,
       "safeMode": "workspace-write",
       "cliPath": "",
-      "cliPathsByHost": {},
+      "cliPathsByHost": {
+        "device:3e2d600b-9083-4954-9a1d-2561e06c5682": "C:\\\\Users\\\\31366\\\\AppData\\\\Local\\\\Programs\\\\OpenAI\\\\Codex\\\\bin\\\\codex.exe"
+      },
       "customModels": "",
-      "discoveredModels": [],
+      "discoveredModels": [
+        {
+          "model": "gpt-5.6-sol",
+          "displayName": "gpt-5.6-sol",
+          "description": "gpt-5.6-sol",
+          "supportedReasoningEfforts": [
+            {
+              "value": "none",
+              "description": "Disable Thinking"
+            },
+            {
+              "value": "high",
+              "description": "Enabled Thinking"
+            }
+          ],
+          "defaultReasoningEffort": "high",
+          "serviceTiers": [],
+          "defaultServiceTier": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "isDefault": true
+        },
+        {
+          "model": "gpt-5.6-terra",
+          "displayName": "gpt-5.6-terra",
+          "description": "gpt-5.6-terra",
+          "supportedReasoningEfforts": [
+            {
+              "value": "none",
+              "description": "Disable Thinking"
+            },
+            {
+              "value": "high",
+              "description": "Enabled Thinking"
+            }
+          ],
+          "defaultReasoningEffort": "high",
+          "serviceTiers": [],
+          "defaultServiceTier": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "isDefault": false
+        },
+        {
+          "model": "gpt-5.6-luna",
+          "displayName": "gpt-5.6-luna",
+          "description": "gpt-5.6-luna",
+          "supportedReasoningEfforts": [
+            {
+              "value": "none",
+              "description": "Disable Thinking"
+            },
+            {
+              "value": "high",
+              "description": "Enabled Thinking"
+            }
+          ],
+          "defaultReasoningEffort": "high",
+          "serviceTiers": [],
+          "defaultServiceTier": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "isDefault": false
+        },
+        {
+          "model": "gpt-5.5",
+          "displayName": "gpt-5.5",
+          "description": "gpt-5.5",
+          "supportedReasoningEfforts": [
+            {
+              "value": "none",
+              "description": "Disable Thinking"
+            },
+            {
+              "value": "high",
+              "description": "Enabled Thinking"
+            }
+          ],
+          "defaultReasoningEffort": "high",
+          "serviceTiers": [],
+          "defaultServiceTier": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "isDefault": false
+        },
+        {
+          "model": "gpt-5.4",
+          "displayName": "gpt-5.4",
+          "description": "gpt-5.4",
+          "supportedReasoningEfforts": [
+            {
+              "value": "none",
+              "description": "Disable Thinking"
+            },
+            {
+              "value": "high",
+              "description": "Enabled Thinking"
+            }
+          ],
+          "defaultReasoningEffort": "high",
+          "serviceTiers": [],
+          "defaultServiceTier": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "isDefault": false
+        },
+        {
+          "model": "gpt-5.4-mini",
+          "displayName": "gpt-5.4-mini",
+          "description": "gpt-5.4-mini",
+          "supportedReasoningEfforts": [
+            {
+              "value": "none",
+              "description": "Disable Thinking"
+            },
+            {
+              "value": "high",
+              "description": "Enabled Thinking"
+            }
+          ],
+          "defaultReasoningEffort": "high",
+          "serviceTiers": [],
+          "defaultServiceTier": null,
+          "inputModalities": [
+            "text",
+            "image"
+          ],
+          "isDefault": false
+        }
+      ],
       "modelAliases": {},
       "visibleModels": null,
       "reasoningSummary": "detailed",
       "environmentVariables": "",
       "environmentHash": "",
-      "catalogTimestamp": 0,
-      "catalogFingerprint": "",
+      "catalogTimestamp": 1784814704093,
+      "catalogFingerprint": "1:f701292896d52971174b6cb878a0ead113ea78f31d5c2462087b53f50666af83",
       "installationMethodsByHost": {},
       "wslDistroOverridesByHost": {}
     },
@@ -93,15 +234,18 @@
   },
   "settingsProvider": "claude",
   "savedProviderModel": {
-    "claude": "haiku"
+    "claude": "haiku",
+    "codex": "gpt-5.4"
   },
   "savedProviderEffort": {
-    "claude": "high"
+    "claude": "high",
+    "codex": "high"
   },
   "savedProviderServiceTier": {},
   "savedProviderThinkingBudget": {},
   "savedProviderPermissionMode": {
-    "claude": "yolo"
+    "claude": "normal",
+    "codex": "normal"
   },
   "pendingProviderSessionInvalidations": {},
   "lastCustomModel": "",
