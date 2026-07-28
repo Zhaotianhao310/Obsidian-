@@ -1,33 +1,45 @@
 # PHY 地址
 
-## 概念
+## 概念一句话精炼
 
-PHY 地址是 MCU 通过 PHY 管理接口访问外部 PHY 芯片时使用的地址。它通常由 PHYAD 等硬件引脚的上拉、下拉或悬空状态决定。
+PHY 地址是 MCU 通过 MDIO/MDC 管理接口访问外部 PHY 寄存器时使用的硬件地址，必须与 PHYAD 引脚形成的实际地址一致，并关联 [[MAC 层与 PHY 层]]。
 
-## CubeMX 配置规则
+## 核心原理与图解
 
-CubeMX 中填写的 PHY Address 必须与硬件实际形成的地址一致。地址错误时，驱动可能无法读写 PHY 寄存器，进而表现为 PHY 初始化失败、链路状态异常或 ping 不通。
+```mermaid
+flowchart LR
+    A[PHYAD 上拉/下拉/悬空] --> B[PHY 内部地址锁存]
+    B --> C[MDIO/MDC 管理访问]
+    C --> D[读取 PHY ID 与链路状态]
+    D --> E[ETH/LwIP 初始化]
+```
 
-## 原素材案例
+地址错误时，MCU 可能读不到正确的 PHY ID 或链路状态，表现为初始化失败、链路异常或 ping 不通。原素材中的 LAN8720 案例把悬空 PHYAD 配置为 0，但该数值只适用于该硬件连接。
 
-原素材中的 LAN8720 开发板将 PHYAD 引脚悬空；由于该引脚带内部弱下拉，作者将 PHY Address 配置为 0。
+## 关键实现与配置
 
-> 该数值只适用于原素材所描述的硬件连接，不应直接套用到其他开发板。
+```c
+/* 伪代码：地址必须来自原理图和 PHY 数据手册 */
+uint8_t phy_addr = board_phy_address();
+assert(phy_addr == PHY_ADDR_FROM_SCHEMATIC);
+phy_reset();
+phy_id = mdio_read(phy_addr, PHY_ID1_REG);
+link = mdio_read(phy_addr, PHY_BSR_REG);
+```
 
-## 排查方法
+## 横向对比与关联
 
-- 先查看 PHY 芯片数据手册中的 PHYAD 编码表。
-- 再查看开发板原理图，确认引脚是上拉、下拉还是悬空。
-- 最后把得到的地址填写到 CubeMX，并结合 PHY 复位、时钟和 [[RMII 接口]]一起验证。
+- **PHY 地址**：解决“访问哪一颗 PHY”。
+- **PHY 复位**：解决“PHY 是否进入确定状态”。
+- **RMII 时钟**：解决“MAC 与 PHY 是否按同一时钟接口交换数据”。
 
-## 相关页面
+排查顺序建议为：数据手册地址编码 → 开发板原理图 → 复位电平 → MDIO 读 ID → [[RMII 接口]]时钟与引脚。
 
 - [[STM32 ETH 外设]]
 - [[MAC 层与 PHY 层]]
 - [[RMII 接口]]
 - [[STM32 CubeMX 配置 LwIP]]
-- [[STM32-以太网知识地图]]
 
 ## 来源
 
-- raw 文件：【LWIP】stm32用CubeMX配置LwIPplusPingplusTCPcl.md
+- raw 文件：`【LWIP】stm32用CubeMX配置LwIPplusPingplusTCPcl.md`

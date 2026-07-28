@@ -1,46 +1,48 @@
 # Linux 字符设备驱动
 
-## 概念
+## 概念一句话精炼
 
-字符设备驱动通过 file_operations 将用户空间的 open、read、write、poll 等操作映射到内核函数。raw 中的 SR501 示例以 read 和 poll 为主，将传感器事件暴露给用户空间。
+字符设备驱动通过 `file_operations` 把内核硬件事件映射为用户态 `open/read/poll` 等文件操作，是 [[Linux SR501 驱动]]提供 `/dev` 入口的基础。
 
-## raw 示例结构
+## 核心原理与图解
 
-- 定义 read 函数，例如 sr501_drv_read 或 sr501_read。
-- 定义 poll 函数，例如 sr501_drv_poll 或 sr501_poll。
-- 用 file_operations 结构体填写 .read 和 .poll。
-- 通过 register_chrdev 注册字符设备。
-- 通过 class_create 和 device_create 创建设备类与设备节点。
-- 卸载时调用 device_destroy、class_destroy 和 unregister_chrdev 等清理函数。
+```mermaid
+flowchart LR
+    A[用户 open/read/poll] --> B[VFS]
+    B --> C[file_operations]
+    C --> D[SR501 驱动状态]
+    D --> E[GPIO/IRQ/等待队列]
+    E --> D
+```
 
-## 读数据路径
+驱动需要完成设备号、`file_operations`、class/device 或 cdev 注册，并保证用户操作期间底层资源仍然有效。
 
-1. 用户进程调用 read。
-2. 驱动检查 SR501 状态；没有新事件时进入 [[Linux 等待队列]]。
-3. [[Linux GPIO 中断]]或轮询逻辑更新状态并唤醒等待者。
-4. 驱动使用 copy_to_user 把状态复制到用户缓冲区。
-5. 驱动清除或更新事件标志，准备下一次读取。
+## 关键实现与数据结构
 
-## 设备节点
+```c
+static const struct file_operations sr501_fops = {
+    .owner = THIS_MODULE,
+    .read  = sr501_read,
+    .poll  = sr501_poll,
+};
 
-raw 示例中使用 device_create 创建 /dev/sr501。设备节点是否能成功出现，还取决于主设备号、class、内核设备模型和错误回滚是否正确。
+/* read 中等待事件，poll 中调用 poll_wait 并返回可读掩码 */
+```
 
-## 注意事项
+`read` 负责数据传输和阻塞语义，`poll` 负责向 `select/poll/epoll` 注册等待队列；二者必须使用一致的就绪条件。
 
-- file_operations 的函数签名必须匹配目标内核版本。
-- copy_to_user 的返回值不能忽略；返回非零表示仍有数据没有复制成功。
-- 设备注册的每一步都要有对应的失败回滚和卸载清理。
-- 不能把 raw 中的多个渐进式代码块直接拼接为一个最终驱动。
+## 横向对比与关联
 
-## 相关页面
+- **字符设备**：适合事件流和字节流式接口。
+- **sysfs**：适合暴露少量设备属性，不适合持续事件读取。
+- **miscdevice**：可减少手动主设备号管理，但仍需正确实现文件操作和生命周期。
+- `copy_to_user` 只能在进程上下文调用，不能放进 GPIO ISR。
 
-- [[Linux SR501 驱动]]
-- [[Linux 等待队列]]
 - [[Linux GPIO 中断]]
+- [[Linux 等待队列]]
 - [[Linux Platform 驱动]]
 - [[SR501 Linux 驱动 API 速查]]
-- [[Linux-驱动知识地图]]
 
 ## 来源
 
-- raw 文件：Linux驱动SR501代码.md
+- raw 文件：`Linux驱动SR501代码.md`

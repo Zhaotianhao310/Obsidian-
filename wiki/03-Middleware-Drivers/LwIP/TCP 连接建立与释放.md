@@ -1,39 +1,53 @@
 # TCP 连接建立与释放
 
-## 三次握手
+## 概念一句话精炼
 
-TCP 建立连接需要双方确认发送和接收方向均可用，典型过程为：
+TCP 通过三次握手建立双向通信能力，通过双方分别关闭发送方向完成四次挥手；具体报文由 [[LwIP]]或其他 TCP/IP 协议栈管理。
 
-1. 主动方发送连接请求。
-2. 被动方确认请求，并返回自己的连接确认信息。
-3. 主动方再次确认，被动方可以开始接收业务数据。
+## 核心原理与图解
 
-## 四次挥手
+```mermaid
+sequenceDiagram
+    participant C as 客户端
+    participant S as 服务端
+    C->>S: SYN
+    S-->>C: SYN + ACK
+    C->>S: ACK
+    Note over C,S: 连接建立，可传输业务数据
+    C->>S: FIN
+    S-->>C: ACK
+    S->>C: FIN
+    C-->>S: ACK
+    Note over C,S: 双方发送方向均关闭
+```
 
-TCP 释放连接通常需要双方分别关闭自己的发送方向：
+握手的重点是确认双方的序列空间和收发能力；挥手分开确认“我不再发送”和“我已经处理完剩余数据”两个方向。TIME_WAIT、重传和异常断开等细节由协议栈状态机处理。
 
-1. 一方提出关闭。
-2. 另一方确认收到，但可能仍有数据待发送。
-3. 另一方发送完剩余数据后提出关闭。
-4. 最初一方确认，连接释放流程完成。
+## 关键实现与状态机
 
-## 在 LwIP 中的对应位置
+```c
+/* RAW API 客户端的抽象流程 */
+pcb = tcp_new();
+tcp_err(pcb, on_error);
+err = tcp_connect(pcb, &server_ip, port, on_connected);
+if (err != ERR_OK) tcp_close(pcb);
+/* on_connected 中注册 recv/sent/err 回调并发送数据 */
+```
 
-- 客户端通过 [[LwIP RAW API TCP 速查]]中的 tcp_connect 发起连接。
-- 服务端通过 tcp_bind、tcp_listen 和 tcp_accept 等接口等待连接。
-- 对端关闭时，tcp_recv 回调可能收到空的 pbuf 指针；应用应按连接状态处理并在必要时调用 tcp_close。
+服务端则是 `tcp_new` → `tcp_bind` → `tcp_listen` → `tcp_accept`。连接关闭时要区分正常 FIN、回调收到 `p == NULL` 和异常 `tcp_abort` 等路径。
 
-## 待核实内容
+## 横向对比与关联
 
-原 raw 文档将关闭后的等待时间写成“2 毫秒”。该说法与 TCP 中常见的 TIME_WAIT/2MSL 表述可能不一致，本页保留为待核实信息，不自行改写为确定结论。
+- **三次握手**：建立连接，不等于应用数据已经完整交换。
+- **四次挥手**：两个方向分别关闭，不能简单理解为“一次关闭报文”。
+- **TCP 与 UDP**：TCP 有连接状态和重传机制；UDP 不执行握手挥手。
+- [[TCP IP 协议栈]]解释分层；[[LwIP RAW API TCP 速查]]解释回调 API。
 
-## 相关页面
+## 原始素材中的待确认项
 
-- [[TCP IP 协议栈]]
-- [[LwIP]]
-- [[LwIP RAW API TCP 速查]]
-- [[LwIP-知识地图]]
+原文把“握手尝试 5 次”和“发完后停留 2 毫秒”等描述作为通俗说明；这些不是所有系统、版本和网络场景都通用的 TCP 固定常数，实际行为应以协议栈参数和抓包结果为准。
 
 ## 来源
 
-- raw 文件：【LWIP】初学STM32plusLWIPplus网络遇到的基础问题记录-stm3.md
+- raw 文件：`【LWIP】初学STM32plusLWIPplus网络遇到的基础问题记录-stm3.md`
+- raw 文件：`【LWIP】stm32用CubeMX配置LwIPplusPingplusTCPcl.md`

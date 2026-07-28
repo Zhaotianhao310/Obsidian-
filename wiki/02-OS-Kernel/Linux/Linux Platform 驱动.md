@@ -1,38 +1,48 @@
 # Linux Platform 驱动
 
-## 概念
+## 概念一句话精炼
 
-platform_driver 用于把平台设备与驱动的 probe/remove 生命周期连接起来。raw 中的 SR501 驱动通过 of_device_id 的 compatible 字段与设备树节点匹配。
+Platform 驱动用于把设备树或板级注册的非枚举设备与驱动代码绑定起来，核心生命周期是匹配、`probe` 初始化和 `remove` 释放，并关联 [[Linux GPIO 输入]]。
 
-## raw 示例结构
+## 核心原理与图解
 
-- of_device_id 表中包含 compatible = 100ask,sr501。
-- platform_driver 设置 .probe 和 .remove。
-- .driver.name 使用 100ask_sr501。
-- .driver.of_match_table 指向设备树匹配表。
-- 模块入口调用 platform_driver_register。
-- 模块出口调用 platform_driver_unregister。
+```mermaid
+flowchart LR
+    A[设备树 compatible] --> B[of_match_table]
+    B --> C[platform_driver_register]
+    C --> D[匹配成功]
+    D --> E[probe 获取 GPIO/IRQ/设备节点]
+    E --> F[remove 释放资源]
+```
 
-## probe 中的职责
+匹配表决定驱动是否接管设备；`probe` 失败时必须回滚已获取资源，`remove` 则应释放所有非 devm 资源并注销用户态接口。
 
-probe 是资源获取和硬件初始化入口，raw 示例在这里完成 GPIO 获取、输入配置、GPIO 到 IRQ 的转换、IRQ 注册和设备节点创建。
+## 关键实现与数据结构
 
-## remove 中的职责
+```c
+static const struct of_device_id sr501_of_match[] = {
+    { .compatible = "100ask,sr501" },
+    { }
+};
 
-remove 必须按资源依赖关系撤销设备节点、释放 IRQ、释放 GPIO、销毁 class，并注销字符设备。raw 文件中的前后版本清理完整程度不同，应以最终实现为准。
+static struct platform_driver sr501_driver = {
+    .probe = sr501_probe,
+    .remove = sr501_remove,
+    .driver = { .name = "sr501", .of_match_table = sr501_of_match },
+};
+module_platform_driver(sr501_driver);
+```
 
-## 设备树匹配
+## 横向对比与关联
 
-compatible 字符串必须与设备树节点一致。raw 中的 100ask,sr501 是示例值，不应直接套用到其他板卡或项目。
-
-## 相关页面
+- Platform 驱动依赖设备树/板级描述；USB、PCI 等总线驱动则由各自总线枚举设备。
+- `probe` 是资源获取和初始化入口；`remove` 是资源释放和状态撤销出口。
+- 原始代码存在驱动名、`compatible` 字符串和设备节点创建路径的版本/实现差异，不能直接视为最终可编译驱动。
 
 - [[Linux SR501 驱动]]
 - [[Linux 字符设备驱动]]
-- [[Linux GPIO 输入]]
 - [[SR501 Linux 驱动 API 速查]]
-- [[Linux-驱动知识地图]]
 
 ## 来源
 
-- raw 文件：Linux驱动SR501代码.md
+- raw 文件：`Linux驱动SR501代码.md`

@@ -1,43 +1,50 @@
 # Linux GPIO 中断
 
-## 概念
+## 概念一句话精炼
 
-GPIO 中断把 SR501 的电平变化转化为内核事件。raw 示例在 probe 中将 GPIO 转换为 IRQ，并通过 request_irq 注册 ISR。
+Linux GPIO 中断把输入电平的边沿变化转换为内核事件，驱动通常在 ISR 中记录状态并唤醒 [[Linux 等待队列]]，再由用户态 `read` 或 `poll` 获取结果。
 
-## 典型流程
+## 核心原理与图解
 
-1. gpiod_get 获取 GPIO 描述符。
-2. gpiod_direction_input 设置输入方向。
-3. gpiod_to_irq 将 GPIO 映射为 IRQ 号。
-4. request_irq 注册上升沿、下降沿或其他触发方式。
-5. ISR 读取 GPIO，更新 sr501_data，并 wake_up 等待队列。
-6. remove 中 free_irq，释放 GPIO 描述符和其他资源。
+```mermaid
+flowchart LR
+    A[GPIO 上升/下降沿] --> B[IRQ 控制器]
+    B --> C[ISR]
+    C --> D[记录 sr501_data]
+    D --> E[wake_up]
+    E --> F[read/poll 返回用户态]
+```
 
-## raw 中的两种中断返回形式
+ISR 应尽量短小：只做确认事件、保存最小状态和唤醒后续处理，不能执行可能睡眠的操作。原始代码使用上升沿和下降沿触发，实际触发方式需要根据 SR501 输出语义和硬件电平确认。
 
-raw 文件不同代码段出现了：
+## 关键实现与数据结构
 
-- return IRQ_HANDLED：表示硬中断处理函数已经完成处理。
-- return IRQ_WAKE_THREAD：表示希望唤醒线程化中断的下半部。
+```c
+static irqreturn_t sr501_isr(int irq, void *dev_id)
+{
+    struct sr501 *dev = dev_id;
+    dev->data = 1;                 // 只记录事件，不在 ISR 中 copy_to_user
+    wake_up_interruptible(&dev->wq);
+    return IRQ_HANDLED;
+}
 
-这两种返回值对应不同的 request_irq/request_threaded_irq 设计，不能只替换返回值而不调整注册方式。
+ret = request_irq(irq, sr501_isr, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+                  "sr501", dev);
+```
 
-## 中断上下文红线
+## 横向对比与关联
 
-- ISR 中不应执行可能睡眠的操作。
-- 复杂处理应移到线程化中断、工作队列或内核线程。
-- ISR 与 read 共享 sr501_data 时，需要考虑并发、可见性和事件覆盖问题。
-- request_irq 成功后，所有失败路径都必须保证 free_irq。
+- **硬中断处理**：响应快，但上下文受限，不能直接访问用户空间。
+- **线程化中断**：顶半部返回 `IRQ_WAKE_THREAD` 后，必须配套 threaded handler；原始代码未展示完整配对，属于待确认问题。
+- **轮询**：实现简单但延迟和 CPU 占用更差。
 
-## 相关页面
+资源释放顺序通常包括 `free_irq`、GPIO 释放和设备节点注销，需与 `probe` 的成功路径一一对应。
 
-- [[Linux SR501 驱动]]
 - [[Linux GPIO 输入]]
 - [[Linux 等待队列]]
-- [[Linux Platform 驱动]]
-- [[SR501 Linux 驱动 API 速查]]
-- [[Linux-驱动知识地图]]
+- [[Linux 字符设备驱动]]
+- [[Linux SR501 驱动]]
 
 ## 来源
 
-- raw 文件：Linux驱动SR501代码.md
+- raw 文件：`Linux驱动SR501代码.md`

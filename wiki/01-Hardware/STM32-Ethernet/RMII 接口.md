@@ -1,38 +1,46 @@
 # RMII 接口
 
-## 概念
+## 概念一句话精炼
 
-RMII 是 MAC 与 PHY 之间使用的简化媒体独立接口。它比 MII 使用更少的信号线，适合引脚资源有限的嵌入式硬件。
+RMII 是 MAC 与 PHY 之间的简化媒体独立接口，用较少信号线完成以太网数据、时钟和管理信号交换，并依赖 [[MAC 层与 PHY 层]]的职责分工。
 
-## 原素材中的配置
+## 核心原理与图解
 
-- 实验平台使用 STM32F407 与 LAN8720。
-- 原素材指出 LAN8720 只支持 RMII，因此 CubeMX 的 ETH 接口模式选择 RMII。
-- GPIO 配置必须按照实际开发板的原理图和引脚复用关系填写。
+```mermaid
+flowchart LR
+    M[STM32 MAC] -->|TXD0/TXD1/TX_EN| P[PHY]
+    P -->|RXD0/RXD1/CRS_DV| M
+    C[50 MHz 参考时钟] --> M
+    C --> P
+    M <-->|MDC/MDIO| P
+```
 
-## 50 MHz 时钟要求
+- RMII 数据路径通常使用两位发送和两位接收数据线。
+- 50 MHz 参考时钟必须由硬件方案明确提供，时钟方向要与 PHY 模式匹配。
+- 原素材以 STM32F407 和 LAN8720 为例，并指出 LAN8720 只支持 RMII；具体能力仍需以芯片手册为准。
 
-RMII 需要 50 MHz 参考时钟。原素材给出的两种情况是：
+## 关键实现与配置
 
-- LAN8720 使用 25 MHz 晶振，再由 PHY 内部 PLL 倍频得到 50 MHz。
-- 如果硬件没有采用这种晶振方案，则需要由 MCU 的 MCO 等时钟输出为 PHY 提供 50 MHz。
+```c
+/* 伪代码：接口模式、时钟和引脚必须与原理图一致 */
+eth_select_mode(ETH_RMII_MODE);
+configure_eth_pins();              // TXD、RXD、CRS_DV、MDC、MDIO
+configure_50mhz_reference_clock();
+phy_reset();
+eth_start();
+```
 
-## 排查顺序
+## 横向对比与关联
 
-1. 确认 PHY 是否支持 RMII。
-2. 确认 ETH 引脚和 RMII 信号方向与原理图一致。
-3. 确认 50 MHz 时钟来源和时序。
-4. 确认 PHY 复位和 [[PHY 地址]]配置。
-5. 硬件链路正常后，再排查 [[LwIP]]。
+| 项目 | RMII | MII |
+|---|---|---|
+| 数据线 | 较少，常见为 2 位数据 | 较多，常见为 4 位数据 |
+| 时钟 | 50 MHz 参考时钟 | 发送/接收时钟分离 |
+| 适用侧重 | 节省 MCU 引脚 | 传统接口或既有硬件 |
 
-## 相关页面
-
-- [[STM32 ETH 外设]]
-- [[MAC 层与 PHY 层]]
-- [[PHY 地址]]
-- [[STM32 CubeMX 配置 LwIP]]
-- [[STM32-以太网知识地图]]
+若 ping 不通，不应只检查 RMII 模式，还应联查 [[PHY 地址]]、PHY 复位、参考时钟和 [[STM32 ETH 外设]]。
 
 ## 来源
 
-- raw 文件：【LWIP】stm32用CubeMX配置LwIPplusPingplusTCPcl.md
+- raw 文件：`【LWIP】stm32用CubeMX配置LwIPplusPingplusTCPcl.md`
+- raw 文件：`【LWIP】初学STM32plusLWIPplus网络遇到的基础问题记录-stm3.md`

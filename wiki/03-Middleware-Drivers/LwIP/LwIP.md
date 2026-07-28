@@ -1,36 +1,42 @@
 # LwIP
 
-## 概念
+## 概念一句话精炼
 
-LwIP 是 Light weight IP 的缩写，是面向资源受限设备的轻量级 TCP/IP 协议栈。原素材将其定位为 STM32 等嵌入式设备中实现网络通信的协议栈。
+LwIP 是面向资源受限设备的轻量级 TCP/IP 协议栈，负责把应用数据连接到 [[STM32 ETH 外设]]和网络协议流程。
 
-## 特点
+## 核心原理与图解
 
-- 目标是在较少资源消耗下提供常用 TCP/IP 能力。
-- 可以按工程需要通过配置宏裁剪功能。
-- 既可以运行在操作系统上，也可以在无操作系统环境中运行。
-- 为减少数据拷贝和内存占用，内部实现不完全强调严格的层间隔离。
-- 原素材提到其包含 DHCP 客户端、DNS 客户端、HTTP 服务器等常见能力；具体功能是否启用取决于工程配置。
+```mermaid
+flowchart LR
+    A[应用任务] --> B[RAW API/Netconn/Socket]
+    B --> C[TCP/UDP]
+    C --> D[IP/ARP/ICMP]
+    D --> E[netif]
+    E --> F[ETH 驱动与 PHY]
+```
 
-## 编程接口
+LwIP 可按工程需要裁剪功能，常见配置包括 DHCP、DNS、HTTP、TCP 和 UDP。是否启用某项能力取决于 `lwipopts.h`、操作系统模式和网卡适配层，不能仅凭协议栈名称判断。
 
-原素材列出三类接口：
+## 关键实现与数据结构
 
-- RAW/Callback API：回调驱动，适合少任务、数据量较小、处理开销敏感的场景。
-- NETCONN API：顺序式接口，适合多任务、大数据量或较大型应用。
-- Socket API：对 NETCONN 的进一步封装，使用更简单，但效率和功能完整性存在取舍。
+```c
+struct netif netif;
+ip4_addr_t ip, mask, gw;
+netif_add(&netif, &ip, &mask, &gw, NULL, ethernetif_init, tcpip_input);
+netif_set_default(&netif);
+netif_set_up(&netif);
+```
 
-## 在 STM32 工程中的位置
+无操作系统和带 RTOS 的 LwIP 在输入处理、定时器和 API 线程约束上不同；RAW API 通过回调工作，不应直接套用阻塞式 Socket 的编程习惯。
 
-[[STM32 ETH 外设]]和 PHY 负责底层硬件链路，CubeMX 负责生成部分初始化框架，LwIP 向上提供 TCP/IP 能力，业务代码再通过 [[LwIP RAW API TCP 速查]]实现客户端或服务端。
+## 横向对比与关联
 
-## 相关页面
-
-- [[TCP IP 协议栈]]
-- [[LwIP RAW API TCP 速查]]
-- [[STM32 CubeMX 配置 LwIP]]
-- [[LwIP-知识地图]]
+- **RAW API**：低开销、回调式，适合资源受限场景。
+- **Netconn API**：以消息和线程安全封装为主，使用成本高于 RAW API。
+- **Socket API**：更接近传统网络程序，但通常需要更完整的系统支持。
+- [[TCP IP 协议栈]]解释协议分层；[[LwIP RAW API TCP 速查]]解释具体调用。
 
 ## 来源
 
-- raw 文件：【LWIP】初学STM32plusLWIPplus网络遇到的基础问题记录-stm3.md
+- raw 文件：`【LWIP】初学STM32plusLWIPplus网络遇到的基础问题记录-stm3.md`
+- raw 文件：`【LWIP】stm32用CubeMX配置LwIPplusPingplusTCPcl.md`

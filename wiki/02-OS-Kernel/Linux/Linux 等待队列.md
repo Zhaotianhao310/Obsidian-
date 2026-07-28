@@ -1,36 +1,48 @@
 # Linux 等待队列
 
-## 概念
+## 概念一句话精炼
 
-等待队列用于让没有新传感器事件的用户进程休眠，并在 GPIO 中断或轮询逻辑产生事件时被唤醒。raw 中的 SR501 read 函数使用 wait_event_interruptible，ISR 或检测线程使用 wake_up。
+等待队列让内核线程或用户触发的读操作在条件不满足时睡眠，并由 [[Linux GPIO 中断]]在事件到来后唤醒，从而避免忙轮询。
 
-## SR501 数据路径
+## 核心原理与图解
 
-- read 检查 sr501_data。
-- 没有新数据时，调用 wait_event_interruptible 进入可被信号打断的睡眠。
-- GPIO 中断或检测线程写入 sr501_data。
-- 生产者调用 wake_up 唤醒等待者。
-- read 被唤醒后通过 copy_to_user 返回数据，并清除或更新事件状态。
+```mermaid
+stateDiagram-v2
+    [*] --> 检查条件
+    检查条件 --> 返回数据: 条件满足
+    检查条件 --> 睡眠: 条件不满足
+    睡眠 --> 检查条件: wake_up
+    睡眠 --> 被信号打断: signal
+    被信号打断 --> [*]
+```
 
-## poll 方案
+等待队列的核心是“条件 + 睡眠 + 唤醒”，而不是单独调用 `wait_event_interruptible`。唤醒后必须重新检查条件，因为可能存在多个等待者或事件已被其他线程消费。
 
-raw 中定义了 sr501_poll/sr501_drv_poll，并包含 poll_wait 的注释示例，但部分代码段没有完整注册等待队列和事件掩码。因此只能把它视为 poll 接口的演示骨架，不能直接当作完整非阻塞驱动。
+## 关键实现与数据结构
 
-## 并发注意
+```c
+wait_queue_head_t wq;
+int data_ready;
 
-- sr501_data 同时由中断/线程写入、read 读取，必须设计明确的同步策略。
-- 等待条件必须与状态更新配套，否则可能出现丢事件或虚假唤醒。
-- wait_event_interruptible 被信号打断时，read 需要处理返回值。
-- 如果传感器事件可能连续到达，单个布尔标志可能覆盖事件，应根据业务选择计数器、环形缓冲区或其他队列。
+init_waitqueue_head(&wq);
+wait_event_interruptible(wq, data_ready != 0);
+if (copy_to_user(buf, &data_ready, sizeof(data_ready))) return -EFAULT;
+data_ready = 0;
+```
 
-## 相关页面
+生产代码还应处理信号返回值、并发访问和“先设置条件再唤醒”的顺序；共享状态可使用锁、原子变量或更合适的事件计数结构。
+
+## 横向对比与关联
+
+- **等待队列**：适合让任务睡眠并等待条件。
+- **轮询**：实现直观，但会持续消耗 CPU。
+- **completion**：适合一次性完成事件；等待队列更适合可重复状态/事件。
+- **阻塞 read**：常用等待队列实现；`poll` 则把同一等待队列暴露给事件循环。
 
 - [[Linux SR501 驱动]]
-- [[Linux 字符设备驱动]]
 - [[Linux GPIO 中断]]
-- [[SR501 Linux 驱动 API 速查]]
-- [[Linux-驱动知识地图]]
+- [[Linux 字符设备驱动]]
 
 ## 来源
 
-- raw 文件：Linux驱动SR501代码.md
+- raw 文件：`Linux驱动SR501代码.md`

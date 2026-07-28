@@ -1,33 +1,48 @@
 # MAC 层与 PHY 层
 
-## MAC 层
+## 概念一句话精炼
 
-MAC 层负责以太网帧的介质访问控制，包括帧的发送与接收、MAC 地址相关处理，以及与 DMA 搬运配合完成数据收发。
+MAC 负责组织和收发以太网帧，PHY 负责把数字接口转换为网线上的物理信号；二者通过 [[RMII 接口]] 或 MII 协作完成链路通信。
 
-## PHY 层
+## 核心原理与图解
 
-PHY 层负责把 MAC 侧的数据转换为网线上的物理信号，并处理链路建立、速率/双工状态等物理层状态。LAN8720、LAN8742、DP83848 都属于外部 PHY 芯片范畴。
+```mermaid
+flowchart LR
+    A[应用数据] --> B[LwIP 协议栈]
+    B --> C[STM32 ETH MAC]
+    C -->|RMII/MII| D[外部 PHY]
+    D --> E[网线与以太网链路]
+    D -->|链路状态/速率/双工| C
+```
 
-## STM32 连接关系
+- MAC 侧处理帧缓存、目的地址、长度和 DMA 描述符。
+- PHY 侧处理自动协商、物理编码、链路检测和 MII 管理寄存器。
+- MAC 与 PHY 都正常，只能说明底层链路可用；TCP/IP 和应用回调仍需由 [[LwIP]] 配置。
 
-- STM32 内置 ETH 时，通常由 STM32 提供 MAC，外部芯片提供 PHY。
-- MAC 与 PHY 之间通过 MII 或 [[RMII 接口]]连接。
-- PHY 还需要单独处理复位、参考时钟、PHY 地址和芯片差异寄存器。
-- 原素材提示：PHY 初始化 GPIO、CLOCK、NVIC 和传输模式前，应先对 PHY 复位引脚执行一次拉低/拉高复位。
+## 关键实现与数据结构
 
-## 边界
+```c
+/* 伪代码：先复位 PHY，再初始化 MAC 和 DMA */
+phy_reset_low();
+phy_reset_high();
+eth_config_rmii();                 // MAC 与 PHY 的接口模式一致
+eth_dma_init(&rx_desc, &tx_desc);   // 描述符指向收发缓冲区
+phy_link = phy_read_status();       // 读取链路、速率和双工状态
+```
 
-MAC/PHY 链路正常，只能说明底层以太网硬件基本可用；还需要完成 [[STM32 CubeMX 配置 LwIP]]，并在应用层使用 [[LwIP RAW API TCP 速查]]进行 TCP 通信。
+## 横向对比与关联
 
-## 相关页面
+| 项目 | MAC | PHY |
+|---|---|---|
+| 主要职责 | 以太网帧和 DMA 收发 | 物理信号、链路协商 |
+| 常见位置 | STM32 ETH 外设 | LAN8720、LAN8742、DP83848 |
+| 关键排查点 | DMA、MAC 地址、缓存 | 复位、时钟、[[PHY 地址]] |
 
-- [[STM32 ETH 外设]]
-- [[RMII 接口]]
-- [[PHY 地址]]
-- [[LwIP]]
-- [[STM32-以太网知识地图]]
+- [[STM32 ETH 外设]]：说明 MAC 在 STM32 中的集成方式。
+- [[STM32 CubeMX 配置 LwIP]]：说明硬件配置如何进入协议栈。
+- [[LwIP RAW API TCP 速查]]：说明上层如何使用 TCP。
 
 ## 来源
 
-- raw 文件：【LWIP】初学STM32plusLWIPplus网络遇到的基础问题记录-stm3.md
-- raw 文件：【LWIP】stm32用CubeMX配置LwIPplusPingplusTCPcl.md
+- raw 文件：`【LWIP】stm32用CubeMX配置LwIPplusPingplusTCPcl.md`
+- raw 文件：`【LWIP】初学STM32plusLWIPplus网络遇到的基础问题记录-stm3.md`

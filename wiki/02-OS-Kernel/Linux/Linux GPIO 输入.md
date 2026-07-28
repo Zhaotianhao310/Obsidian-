@@ -1,36 +1,42 @@
 # Linux GPIO 输入
 
-## 概念
+## 概念一句话精炼
 
-Linux GPIO consumer API 使用 gpio_desc 表示 GPIO。raw 中的 SR501 驱动通过 gpiod_get 获取 GPIO 描述符，再配置为输入并读取电平。
+Linux GPIO 输入接口把设备树或板级描述中的 GPIO 映射为内核可读的输入信号，是 [[Linux SR501 驱动]]获取人体感应状态的硬件入口。
 
-## raw 中的调用链
+## 核心原理与图解
 
-1. gpiod_get 获取 GPIO 描述符。
-2. gpiod_direction_input 将 GPIO 设置为输入方向。
-3. gpiod_get_value 读取当前电平。
-4. gpiod_put 在 remove 或失败回滚路径释放描述符。
+```mermaid
+flowchart LR
+    A[设备树 GPIO 描述] --> B[gpiod_get]
+    B --> C[gpiod_direction_input]
+    C --> D[gpiod_get_value]
+    D --> E[驱动状态或中断判断]
+```
 
-## 适用位置
+GPIO 输入只解决“如何读取电平”，不自动解决去抖、边沿触发、并发保护和用户态通知。需要事件通知时，应结合 [[Linux GPIO 中断]]与 [[Linux 等待队列]]。
 
-- 中断方案：probe 中配置 GPIO，ISR 中读取电平并生成事件。
-- 线程方案：内核线程周期性读取电平，再判断是否需要唤醒用户空间。
+## 关键实现与数据结构
 
-## 注意事项
+```c
+struct gpio_desc *gpio;
 
-- GPIO 描述符的来源和索引必须与设备树或平台设备资源一致。
-- gpiod_get、gpiod_direction_input 和 gpiod_to_irq 都可能失败，必须检查错误指针或错误码。
-- 读取 GPIO 电平与更新共享状态之间存在并发关系，实际驱动应按目标内核和上下文选择锁或原子变量。
-- raw 中使用的是示例性调用，不能据此推断所有平台的设备树属性名称。
+gpio = devm_gpiod_get(&pdev->dev, NULL, GPIOD_IN);
+if (IS_ERR(gpio)) return PTR_ERR(gpio);
+if (gpiod_direction_input(gpio)) return -EINVAL;
+int level = gpiod_get_value_cansleep(gpio); // 允许可睡眠 GPIO
+```
 
-## 相关页面
+## 横向对比与关联
 
-- [[Linux SR501 驱动]]
+- `gpiod_get` / `devm_gpiod_get`：获取 GPIO 描述符；后者便于设备解绑时自动释放。
+- `gpiod_get_value`：适用于不可睡眠路径；`gpiod_get_value_cansleep`：适用于可能睡眠的 GPIO 控制器。
+- GPIO 输入轮询简单但浪费 CPU；中断 + 等待队列更适合 SR501 这类状态变化通知。
+
 - [[Linux GPIO 中断]]
+- [[Linux 等待队列]]
 - [[Linux Platform 驱动]]
-- [[SR501 Linux 驱动 API 速查]]
-- [[Linux-驱动知识地图]]
 
 ## 来源
 
-- raw 文件：Linux驱动SR501代码.md
+- raw 文件：`Linux驱动SR501代码.md`
