@@ -15,6 +15,8 @@ flowchart LR
     E --> F[ETH 驱动与 PHY]
 ```
 
+
+> 图 1?LwIP ?? netif ??????????????? TCP/IP ?????
 LwIP 可按工程需要裁剪功能，常见配置包括 DHCP、DNS、HTTP、TCP 和 UDP。是否启用某项能力取决于 `lwipopts.h`、操作系统模式和网卡适配层，不能仅凭协议栈名称判断。
 
 ## 关键实现与数据结构
