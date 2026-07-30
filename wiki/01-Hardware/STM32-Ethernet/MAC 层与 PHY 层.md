@@ -13,8 +13,9 @@ flowchart LR
     C -->|RMII/MII| D[外部 PHY]
     D --> E[网线与以太网链路]
     D -->|链路状态/速率/双工| C
-> 图 1：数据从 LwIP 进入 STM32 ETH MAC，经 RMII 到外部 PHY；接收方向沿相反路径返回，链路状态由 PHY 反馈给 MAC。
 ```
+
+> 图 1：数据从 LwIP 进入 STM32 ETH MAC，经 RMII 到外部 PHY；接收方向沿相反路径返回，链路状态由 PHY 反馈给 MAC。
 
 
 
