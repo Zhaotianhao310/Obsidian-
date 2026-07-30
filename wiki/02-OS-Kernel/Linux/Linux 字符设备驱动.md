@@ -15,8 +15,16 @@ flowchart LR
     E --> D
 ```
 
+> 图 1：用户态文件操作经 VFS 分派到 file_operations，再进入驱动状态；GPIO/IRQ 和等待队列只负责改变可读条件。
+
 驱动需要完成设备号、`file_operations`、class/device 或 cdev 注册，并保证用户操作期间底层资源仍然有效。
 
+## 注册与数据访问流水线
+
+1. 分配主设备号并初始化 cdev/file_operations，再把设备注册到内核。
+2. 创建 class/device 或等价设备节点，使用户态可以 open/read/poll。
+3. read 使用等待队列等待与 poll 相同的就绪条件；事件到来后再 copy_to_user。
+4. 退出时按设备节点 → cdev → 主设备号的反向顺序注销，并确认没有并发用户访问。
 ## 关键实现与数据结构
 
 ```c

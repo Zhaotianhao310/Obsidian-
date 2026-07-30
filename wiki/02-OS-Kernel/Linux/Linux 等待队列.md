@@ -16,21 +16,23 @@ stateDiagram-v2
     被信号打断 --> [*]
 ```
 
+> 图 1：读路径先检查条件；条件不满足时进入睡眠，生产者设置条件并唤醒，唤醒后重新检查，信号则返回中断错误。
+
 等待队列的核心是“条件 + 睡眠 + 唤醒”，而不是单独调用 `wait_event_interruptible`。唤醒后必须重新检查条件，因为可能存在多个等待者或事件已被其他线程消费。
 
 ## 关键实现与数据结构
 
 ```c
-wait_queue_head_t wq;
-int data_ready;
-
-init_waitqueue_head(&wq);
-wait_event_interruptible(wq, data_ready != 0);
-if (copy_to_user(buf, &data_ready, sizeof(data_ready))) return -EFAULT;
-data_ready = 0;
+int ret, ready;
+ret = wait_event_interruptible(dev->wq, READ_ONCE(dev->data_ready));
+if (ret) return ret;                 /* 信号打断 */
+spin_lock_irq(&dev->lock);
+ready = dev->data_ready; dev->data_ready = 0;
+spin_unlock_irq(&dev->lock);
+if (copy_to_user(buf, &ready, sizeof(ready))) return -EFAULT;
 ```
 
-生产代码还应处理信号返回值、并发访问和“先设置条件再唤醒”的顺序；共享状态可使用锁、原子变量或更合适的事件计数结构。
+生产者必须在同一把锁保护下先写入 data_ready，再调用 wake_up_interruptible；多消费者场景应使用事件计数或其他明确的消费协议。copy_to_user 只能在进程上下文执行。
 
 ## 横向对比与关联
 
@@ -40,7 +42,6 @@ data_ready = 0;
 - **阻塞 read**：常用等待队列实现；`poll` 则把同一等待队列暴露给事件循环。
 
 - [[Linux SR501 驱动]]
-- [[Linux GPIO 中断]]
 - [[Linux 字符设备驱动]]
 
 ## 来源

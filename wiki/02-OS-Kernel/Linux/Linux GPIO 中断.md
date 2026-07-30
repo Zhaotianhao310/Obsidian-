@@ -15,7 +15,16 @@ flowchart LR
     E --> F[read/poll 返回用户态]
 ```
 
+> 图 1：GPIO 边沿经 IRQ 控制器进入 ISR，ISR 只发布最小事件并唤醒进程上下文，最终由 read/poll 返回用户态。
+
 ISR 应尽量短小：只做确认事件、保存最小状态和唤醒后续处理，不能执行可能睡眠的操作。原始代码使用上升沿和下降沿触发，实际触发方式需要根据 SR501 输出语义和硬件电平确认。
+
+## 硬件到用户态流水线与并发
+
+1. GPIO 边沿进入 IRQ 控制器后执行 ISR；ISR 只读取必要状态、更新共享事件并唤醒等待者。
+2. 共享的 sr501_data 需要使用 READ_ONCE/WRITE_ONCE、原子变量或锁；若事件不能合并，应使用事件计数而不是固定值 1。
+3. request_irq 的返回值必须检查；失败时 probe 要回滚已经申请的 GPIO、字符设备等资源。
+4. copy_to_user、可能睡眠的 GPIO 读取和复杂日志只能放在进程或线程化中断上下文。
 
 ## 关键实现与数据结构
 
@@ -23,7 +32,7 @@ ISR 应尽量短小：只做确认事件、保存最小状态和唤醒后续处�
 static irqreturn_t sr501_isr(int irq, void *dev_id)
 {
     struct sr501 *dev = dev_id;
-    dev->data = 1;                 // 只记录事件，不在 ISR 中 copy_to_user
+    WRITE_ONCE(dev->data, 1);                 // 只记录事件，不在 ISR 中 copy_to_user
     wake_up_interruptible(&dev->wq);
     return IRQ_HANDLED;
 }
@@ -41,7 +50,6 @@ ret = request_irq(irq, sr501_isr, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 资源释放顺序通常包括 `free_irq`、GPIO 释放和设备节点注销，需与 `probe` 的成功路径一一对应。
 
 - [[Linux GPIO 输入]]
-- [[Linux 等待队列]]
 - [[Linux 字符设备驱动]]
 - [[Linux SR501 驱动]]
 

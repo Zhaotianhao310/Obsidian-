@@ -14,7 +14,18 @@ flowchart LR
     D --> E[驱动状态或中断判断]
 ```
 
+> 图 1：GPIO 描述符从设备树进入驱动后，依次完成输入方向配置和电平读取；中断与用户态通知属于后续链路。
+
 GPIO 输入只解决“如何读取电平”，不自动解决去抖、边沿触发、并发保护和用户态通知。需要事件通知时，应结合 [[Linux GPIO 中断]]与 [[Linux 等待队列]]。
+
+## 硬件到软件时序与错误处理
+
+1. 设备树或板级描述提供 GPIO 线索，devm_gpiod_get 获取描述符；获取失败时必须返回 PTR_ERR。
+2. 调用 gpiod_direction_input 后，GPIO 控制器进入输入方向；具体上拉/下拉和电平有效性需由设备树与硬件电平确认。
+3. 在可睡眠上下文读取电平时使用 gpiod_get_value_cansleep；不能把该调用放进硬中断上下文。
+4. 如果需要边沿事件，应把同一个 GPIO 描述符转换为 IRQ，转交 [[Linux GPIO 中断]]，而不是在高频循环中持续轮询。
+
+错误处理要保留内核返回值：资源获取失败返回 PTR_ERR，方向配置失败返回原始 errno，电平读取错误需按对应 GPIO 控制器接口处理。
 
 ## 关键实现与数据结构
 
@@ -33,8 +44,6 @@ int level = gpiod_get_value_cansleep(gpio); // 允许可睡眠 GPIO
 - `gpiod_get_value`：适用于不可睡眠路径；`gpiod_get_value_cansleep`：适用于可能睡眠的 GPIO 控制器。
 - GPIO 输入轮询简单但浪费 CPU；中断 + 等待队列更适合 SR501 这类状态变化通知。
 
-- [[Linux GPIO 中断]]
-- [[Linux 等待队列]]
 - [[Linux Platform 驱动]]
 
 ## 来源

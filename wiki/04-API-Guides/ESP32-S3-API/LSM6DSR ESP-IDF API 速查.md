@@ -1,4 +1,4 @@
-﻿# LSM6DSR ESP-IDF 官方 API 速查
+# LSM6DSR ESP-IDF 官方 API 速查
 
 > **定位**：本页只收录 ESP-IDF 5.5.5、ESP-IDF 随附 FreeRTOS，以及 ESP-IDF 官方组件提供的 API。项目中自定义的 LSM6DSR 封装函数、业务函数和寄存器常量不属于本页 API。
 >
@@ -29,6 +29,9 @@
 #include "freertos/task.h"            // 任务和任务通知
 #include "freertos/ringbuf.h"         // Ringbuffer API
 #include "esp_err.h"                  // esp_err_t、ESP_OK
+#include "esp_intr_alloc.h"          // ESP_INTR_FLAG_IRAM
+#include "esp_log.h"                 // ESP_LOGW 等日志宏
+#include <string.h>                   // memcpy 示例
 ~~~
 
 > 本页按 ESP-IDF 5.5.5 整理。升级 ESP-IDF 后，应重新核对对应版本的头文件、结构体字段和官方 API Reference。
@@ -364,7 +367,9 @@ ESP_ERROR_CHECK(err);
 - **使用 Demo**：
 
 ~~~c
-ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+esp_err_t err = esp_wifi_set_mode(WIFI_MODE_STA);
+if (err != ESP_OK)
+    return err;
 ~~~
 
 ### `esp_wifi_set_config`
@@ -422,7 +427,9 @@ if (err != ESP_OK) {
 - **使用 Demo**：
 
 ~~~c
-ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
+esp_err_t err = esp_wifi_set_ps(WIFI_PS_NONE);
+if (err != ESP_OK)
+    ESP_LOGW("wifi", "set power save failed");
 ~~~
 
 ## 六、NVS Flash 官方 API
@@ -453,8 +460,9 @@ ESP_ERROR_CHECK(err);
 - **使用 Demo**：
 
 ~~~c
-ESP_ERROR_CHECK(nvs_flash_erase());
-ESP_ERROR_CHECK(nvs_flash_init());
+esp_err_t err = nvs_flash_erase();
+if (err == ESP_OK)
+    err = nvs_flash_init();
 ~~~
 
 ## 官方 API 与项目函数的最终区分

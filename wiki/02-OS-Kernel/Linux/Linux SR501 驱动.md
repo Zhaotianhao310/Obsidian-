@@ -20,8 +20,25 @@ sequenceDiagram
     D->>U: copy_to_user
 ```
 
+> 图 1：SR501 输出边沿经 GPIO/IRQ 进入驱动，驱动保存事件并唤醒阻塞的 read/poll，最后在进程上下文完成用户空间拷贝。
+
 原始素材包含多个递进版本：早期代码只有 `probe/remove` 框架，后续版本加入 GPIO、IRQ、等待队列、字符设备和 `device_create`。因此本页总结的是设计链路，不把 raw 中任一片段视作可直接部署的最终实现。
 
+## 驱动流水线与硬件边界
+
+- 初始化：获取输入 GPIO → 转换 IRQ → 注册 ISR/线程化中断 → 初始化字符设备与设备节点 → 对外提供 read/poll。
+- 采集：SR501 电平边沿 → IRQ 控制器 → ISR 记录事件 → 设置就绪条件 → 唤醒等待队列 → read/poll 返回 → copy_to_user。
+- 退出：先阻止新的用户访问，再注销设备节点和字符设备，最后释放 IRQ、GPIO 等非 devm 资源。
+- SR501 本身通过 GPIO 输出状态，raw 没有可由该驱动直接访问的内部寄存器；不要凭空制作寄存器映射表。
+
+~~~c
+/* 伪代码：以下函数名表示工程流水线，不是 Linux 官方 API */
+probe: gpio = devm_gpiod_get(...); irq = gpiod_to_irq(gpio);
+request_irq(irq, sr501_isr, flags, "sr501", dev);
+isr: WRITE_ONCE(dev->data, 1); wake_up_interruptible(&dev->wq);
+read: ret = wait_event_interruptible(dev->wq, READ_ONCE(dev->data));
+if (ret) return ret; copy_to_user(buf, &dev->data, sizeof(dev->data));
+~~~
 ## 关键实现与数据结构
 
 ```c
