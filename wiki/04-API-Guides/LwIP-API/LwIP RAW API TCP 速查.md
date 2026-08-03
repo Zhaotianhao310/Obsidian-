@@ -13,7 +13,7 @@
 #include "lwip/ip_addr.h"
 ~~~
 
-## 核心 API
+## 核心函数详解
 
 ### `tcp_new`
 

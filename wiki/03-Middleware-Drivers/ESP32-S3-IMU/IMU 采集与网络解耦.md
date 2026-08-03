@@ -1,4 +1,4 @@
-﻿# IMU 采集与网络解耦
+# IMU 采集与网络解耦
 
 ## 概念一句话
 IMU 采集与网络解耦用高优先级 FIFO 任务生产完整 frame，再通过 32 KiB 的 `RINGBUF_TYPE_NOSPLIT` RingBuffer 交给网络任务消费，把 SPI/FIFO 的实时性与 Wi-Fi/TCP 抖动隔离开；核心关联是 [[LSM6DSR FIFO 采集]] 与 [[IMU TCP 固定帧]]。

@@ -36,6 +36,10 @@
 
 > 本页按 ESP-IDF 5.5.5 整理。升级 ESP-IDF 后，应重新核对对应版本的头文件、结构体字段和官方 API Reference。
 
+## 核心函数详解
+
+以下按官方模块分组整理各 API。
+
 ## 一、SPI Master 官方 API
 
 ### `spi_bus_initialize`

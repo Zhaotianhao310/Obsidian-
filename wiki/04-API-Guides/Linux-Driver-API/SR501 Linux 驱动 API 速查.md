@@ -15,7 +15,7 @@
 #include <linux/err.h>
 ~~~
 
-## 核心 API
+## 核心函数详解
 
 ### `devm_gpiod_get`
 

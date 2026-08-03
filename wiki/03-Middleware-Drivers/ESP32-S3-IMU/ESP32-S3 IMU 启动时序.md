@@ -1,4 +1,4 @@
-﻿# ESP32-S3 IMU 启动时序
+# ESP32-S3 IMU 启动时序
 
 ## 概念一句话
 ESP32-S3 IMU 启动时序的核心是先让 **SPI、任务、RingBuffer、GPIO ISR 和 DMA** 就绪，再让 LSM6DSR 进入 FIFO Continuous，从而避免第一次 watermark 事件没有消费者；核心关联是 [[LSM6DSR SPI 驱动]] 与 [[LSM6DSR FIFO 采集]]。
