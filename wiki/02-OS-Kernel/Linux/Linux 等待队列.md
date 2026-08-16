@@ -43,6 +43,7 @@ if (copy_to_user(buf, &ready, sizeof(ready))) return -EFAULT;
 
 - [[Linux SR501 驱动]]
 - [[Linux 字符设备驱动]]
+- [[Linux HS0038 红外驱动]]
 
 ## 来源
 

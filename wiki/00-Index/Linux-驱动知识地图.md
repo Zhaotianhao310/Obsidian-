@@ -6,6 +6,11 @@
 - [[Linux 字符设备驱动]]
 - [[Linux Platform 驱动]]
 
+## Linux input 与红外驱动
+
+- [[Linux input 子系统]]
+- [[Linux HS0038 红外驱动]]
+
 ## GPIO 与事件通知
 
 - [[Linux GPIO 输入]]

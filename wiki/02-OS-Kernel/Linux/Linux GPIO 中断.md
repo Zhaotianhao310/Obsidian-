@@ -52,6 +52,8 @@ ret = request_irq(irq, sr501_isr, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 - [[Linux GPIO 输入]]
 - [[Linux 字符设备驱动]]
 - [[Linux SR501 驱动]]
+- [[Linux HS0038 红外驱动]]
+- [[Linux input 子系统]]
 
 ## 来源
 

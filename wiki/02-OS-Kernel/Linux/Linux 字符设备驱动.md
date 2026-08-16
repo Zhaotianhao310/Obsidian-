@@ -50,6 +50,8 @@ static const struct file_operations sr501_fops = {
 - [[Linux 等待队列]]
 - [[Linux Platform 驱动]]
 - [[SR501 Linux 驱动 API 速查]]
+- [[Linux HS0038 红外驱动]]
+- [[Linux input 子系统]]
 
 ## 来源
 

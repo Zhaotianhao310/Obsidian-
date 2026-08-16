@@ -48,6 +48,8 @@ module_platform_driver(sr501_driver);
 - [[Linux SR501 驱动]]
 - [[Linux 字符设备驱动]]
 - [[SR501 Linux 驱动 API 速查]]
+- [[Linux HS0038 红外驱动]]
+- [[Linux input 子系统]]
 
 ## 来源
 
