@@ -64,6 +64,7 @@ static int hs0038_report_key(struct input_dev *dev, unsigned int ir)
 - [[Linux Platform 驱动]]：负责设备树匹配、`probe/remove` 生命周期，不负责定义输入事件语义。
 - [[Linux GPIO 中断]]：负责把硬件边沿交给驱动；ISR 不应直接执行用户空间拷贝。
 - [[Linux HS0038 红外驱动]]：本页输入对象和事件协议的具体生产者。
+- [[Linux input 子系统 API 速查]]：官方 input core 接口、结构体和事件常量速查。
 - [[Linux-驱动知识地图]]：Linux 驱动主题的集中索引。
 - 正式红外链路通常是 `GPIO -> rc-core -> NEC 解码器 -> keymap -> input core -> evdev`，HS0038 教学驱动将多层逻辑合并在一个 platform driver 中。
 

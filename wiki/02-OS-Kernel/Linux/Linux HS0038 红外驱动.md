@@ -82,6 +82,7 @@ HS0038 是集成红外接收头，raw 素材只描述其 GPIO 脉冲输出，没
 - [[Linux 字符设备驱动]]：提供 `/dev/myhs0038` 私有接口。
 - [[Linux Platform 驱动]]：完成设备树匹配、资源获取和 `probe/remove` 生命周期。
 - [[Linux input 子系统]]：负责标准按键语义、事件同步和 `/dev/input/eventX` 导出。
+- [[Linux input 子系统 API 速查]]：input core 官方接口与结构体速查。
 - [[Linux SR501 驱动]]：同样采用 GPIO/IRQ/等待队列/字符设备链路，但 SR501 输出的是电平状态，不涉及 NEC 脉宽解码。
 - [[Linux-驱动知识地图]]：Linux 驱动主题的集中索引。
 

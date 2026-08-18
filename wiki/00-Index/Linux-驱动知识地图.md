@@ -20,6 +20,7 @@
 ## API 速查
 
 - [[SR501 Linux 驱动 API 速查]]
+- [[Linux input 子系统 API 速查]]
 
 ## 关联索引
 
